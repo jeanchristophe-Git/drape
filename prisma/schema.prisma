@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ===== USER MODEL =====
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  image     String?
+
+  // Plan & Status
+  plan      Plan     @default(FREE)
+  isPremium Boolean  @default(false)
+
+  // Admin Role (pour le panel admin)
+  role      UserRole @default(USER)
+
+  // Quotas FREE
+  freeUsed  Int      @default(0)  // compteur sur 2
+
+  // Quotas PREMIUM (anti-abus)
+  dailyUsed    Int      @default(0)
+  dailyResetAt DateTime @default(now())
+
+  // Stripe Subscription
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  premiumSince           DateTime?
+
+  // Modération
+  isBanned  Boolean @default(false)
+  banReason String?
+
+  // Relations
+  tryOns   TryOn[]
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([isPremium])
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// ===== TRYON MODEL =====
+model TryOn {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Images (Supabase Storage URLs)
+  inputPhoto  String   // photo user
+  clothPhoto  String   // photo vêtement
+  resultPhoto String?  // résultat IA
+
+  // Metadata
+  status       Status  @default(PENDING)
+  resolution   String  @default("768x768") // ou "1024x1024"
+  hasWatermark Boolean @default(true)
+
+  // Tracking interne
+  aiProvider     String?  @default("nanobana")
+  aiCost         Float?   @default(0.10)
+  processingTime Int?     // en secondes
+  errorMessage   String?
+
+  // Expiration (FREE only)
+  expiresAt DateTime? // 7 jours pour FREE
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+enum Status {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+}
+
+// ===== PAYMENT MODEL =====
+model Payment {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+
+  // Stripe
+  stripePaymentId String  @unique
+  stripeInvoiceId String? @unique
+
+  // Details
+  amount        Float   @default(9.99)
+  currency      String  @default("usd")
+  status        String  // succeeded, failed, refunded
+  billingReason String? // subscription_create, subscription_cycle
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ===== USAGE ANALYTICS =====
+model Usage {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String   // tryon_created, subscription_started, subscription_cancelled, limit_reached, etc.
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action])
+}
+
+// ===== DAILY ANALYTICS (pour le dashboard admin) =====
+model DailyAnalytics {
+  id        String   @id @default(uuid())
+  date      DateTime @unique @db.Date // Date du jour
+
+  // Métriques utilisateurs
+  totalUsers       Int @default(0) // Total users jusqu'à cette date
+  newUsers         Int @default(0) // Nouveaux users ce jour
+  activeUsers      Int @default(0) // Users qui ont fait une action
+  premiumUsers     Int @default(0) // Total premium users
+  newPremiumUsers  Int @default(0) // Nouveaux premium ce jour
+  cancelledPremium Int @default(0) // Annulations premium ce jour
+
+  // Métriques try-ons
+  totalTryOns    Int @default(0) // Try-ons générés ce jour
+  freeTryOns     Int @default(0) // Try-ons gratuits
+  premiumTryOns  Int @default(0) // Try-ons premium
+  successRate    Float @default(0) // Taux de succès (%)
+
+  // Métriques financières
+  revenue       Float @default(0) // Revenus du jour
+  apiCost       Float @default(0) // Coût API Replicate
+  netProfit     Float @default(0) // Profit net (revenue - apiCost)
+  mrr           Float @default(0) // Monthly Recurring Revenue à cette date
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
+
+// ===== MODERATION FLAGS (signalements de contenu) =====
+model ModerationFlag {
+  id          String   @id @default(uuid())
+  tryOnId     String
+  reportedBy  String?  // userId qui a signalé (null si auto-détecté)
+  reason      String   // inappropriate_content, nudity, violence, etc.
+  status      ModerationStatus @default(PENDING)
+  reviewedBy  String?  // Admin userId qui a traité
+  reviewNote  String?  // Notes de l'admin
+  createdAt   DateTime @default(now())
+  reviewedAt  DateTime?
+
+  @@index([status])
+  @@index([tryOnId])
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REMOVED
+}
+
+// ===== SYSTEM SETTINGS (configuration globale) =====
+model SystemSetting {
+  id    String @id @default(uuid())
+  key   String @unique // ex: "free_quota", "premium_price", "registration_enabled"
+  value String // Stocké en JSON string
+  description String? // Description de ce paramètre
+
+  updatedAt DateTime @updatedAt
+  updatedBy String? // Admin userId qui a modifié
+
+  @@index([key])
+}
+
+// ===== ADMIN LOGS (logs des actions admin) =====
+model AdminLog {
+  id          String   @id @default(uuid())
+  adminId     String   // Admin userId qui a fait l'action
+  action      String   // banned_user, updated_setting, deleted_content, etc.
+  targetType  String?  // User, TryOn, Setting, etc.
+  targetId    String?  // ID de l'élément ciblé
+  metadata    Json?    // Détails supplémentaires
+  createdAt   DateTime @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([action])
+}
