@@ -1,13 +1,27 @@
-import { createClient } from '@/utils/supabase/client';
+import { createClient as createServerClient } from '@supabase/supabase-js';
 
 const BUCKET_NAME = 'drape-images';
+
+// Créer un client Supabase avec service role (bypass RLS)
+function getServiceClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+}
 
 export async function uploadToSupabase(
   file: File | string,
   userId: string,
   type: 'person' | 'cloth' | 'result'
 ): Promise<string> {
-  const supabase = createClient();
+  const supabase = getServiceClient();
 
   // Générer un nom de fichier unique
   const timestamp = Date.now();
@@ -47,7 +61,7 @@ export async function uploadToSupabase(
 }
 
 export async function deleteFromSupabase(fileUrl: string): Promise<void> {
-  const supabase = createClient();
+  const supabase = getServiceClient();
 
   // Extraire le chemin du fichier depuis l'URL
   const url = new URL(fileUrl);
@@ -69,7 +83,7 @@ export async function deleteFromSupabase(fileUrl: string): Promise<void> {
 }
 
 export async function getSignedUrl(filePath: string, expiresIn: number = 3600): Promise<string> {
-  const supabase = createClient();
+  const supabase = getServiceClient();
 
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)
