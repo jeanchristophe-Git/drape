@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { checkQuota, getUserQuota } from '@/lib/quota';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,6 +14,18 @@ export async function GET(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Créer l'utilisateur dans Prisma s'il n'existe pas
+    await prisma.user.upsert({
+      where: { id: user.id },
+      update: {},
+      create: {
+        id: user.id,
+        email: user.email!,
+        name: user.user_metadata?.full_name || user.email?.split('@')[0],
+        image: user.user_metadata?.avatar_url,
+      },
+    });
 
     const [quotaCheck, quotaInfo] = await Promise.all([
       checkQuota(user.id),
