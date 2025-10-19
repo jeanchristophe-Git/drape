@@ -34,8 +34,12 @@ export async function GET(req: NextRequest) {
 
   } catch (error: any) {
     console.error('Quota API error:', error);
+    // En dev, retourner plus de détails pour debugging
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      {
+        error: error.message || 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
       { status: 500 }
     );
   }
