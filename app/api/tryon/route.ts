@@ -94,14 +94,14 @@ export async function POST(req: NextRequest) {
         status: 'PROCESSING',
         resolution,
         hasWatermark,
-        aiProvider: 'replicate-idm-vton'
+        aiProvider: 'replicate-catvton-flux'
       }
     });
 
     // 8. Lancer génération IA (background process)
     (async () => {
       try {
-        // Génération avec Replicate IDM-VTON
+        // Génération avec Replicate CatVTON-Flux (2x plus rapide: ~33s)
         const result = await generateVirtualTryOn({
           personImageUrl: personUrl,
           clothImageUrl: clothUrl

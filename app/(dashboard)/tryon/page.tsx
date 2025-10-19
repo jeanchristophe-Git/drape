@@ -97,7 +97,7 @@ export default function TryOnPage() {
           <ol className="space-y-2 text-sm">
             <li>1. Upload a clear photo of yourself (full body recommended)</li>
             <li>2. Upload an image of the clothing item you want to try on</li>
-            <li>3. Click "Generate" and wait ~18 seconds for the AI to work its magic</li>
+            <li>3. Click "Generate" and wait ~30-40 seconds for the AI to work its magic</li>
             <li>4. View your result with a before/after comparison slider</li>
           </ol>
         </CardContent>

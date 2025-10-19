@@ -10,7 +10,7 @@ interface VirtualTryOnResponse {
 }
 
 /**
- * Génère un virtual try-on en utilisant Replicate IDM-VTON
+ * Génère un virtual try-on en utilisant Replicate CatVTON-Flux (2x plus rapide)
  * @param personImageUrl - URL de la photo de la personne
  * @param clothImageUrl - URL de la photo du vêtement
  * @returns URL de l'image résultante et temps de traitement
@@ -25,14 +25,15 @@ export async function generateVirtualTryOn({
   const startTime = Date.now();
 
   try {
-    // Appeler le modèle IDM-VTON sur Replicate
+    // Appeler le modèle CatVTON-Flux sur Replicate (33s avg, 2x plus rapide qu'IDM-VTON)
     const output = await replicate.run(
-      "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
+      "mmezhov/catvton-flux",
       {
         input: {
-          garm_img: clothImageUrl,      // Image du vêtement
-          human_img: personImageUrl,     // Image de la personne
-          garment_des: "clothing",       // Description du vêtement
+          image: personImageUrl,         // Image de la personne
+          garment: clothImageUrl,        // Image du vêtement
+          seed: 42,                      // Seed pour reproductibilité
+          steps: 30                      // Nombre d'étapes de diffusion
         }
       }
     ) as any;
@@ -48,7 +49,7 @@ export async function generateVirtualTryOn({
     };
 
   } catch (error: any) {
-    console.error('Replicate IDM-VTON generation failed:', error);
+    console.error('Replicate CatVTON-Flux generation failed:', error);
     throw new Error(`Virtual try-on generation failed: ${error.message || 'Unknown error'}`);
   }
 }
@@ -70,6 +71,6 @@ export async function testReplicateConnection(): Promise<boolean> {
 
 /**
  * Obtient le coût estimé d'une génération
- * Note: IDM-VTON coûte environ $0.024 par génération sur Replicate
+ * Note: CatVTON-Flux coûte environ $0.046 par génération sur Replicate (21 runs per $1)
  */
-export const COST_PER_GENERATION = 0.024; // $0.024 par génération
+export const COST_PER_GENERATION = 0.046; // $0.046 par génération
