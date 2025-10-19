@@ -27,25 +27,23 @@ export async function generateVirtualTryOn({
   try {
     // Appeler le modèle IDM-VTON sur Replicate
     const output = await replicate.run(
-      "cuuupid/idm-vton:c871bb9b046607b680449ecbae55fd8c6d945e0a1948644bf2361b3d021d3ff4",
+      "cuuupid/idm-vton:0513734a452173b8173e907e3a59d19a36266e55b48528559432bd21c7d7e985",
       {
         input: {
           garm_img: clothImageUrl,      // Image du vêtement
           human_img: personImageUrl,     // Image de la personne
           garment_des: "clothing",       // Description du vêtement
-          is_checked: true,              // Activer le pré-processing
-          is_checked_crop: false,        // Ne pas crop automatiquement
-          denoise_steps: 30,             // Nombre d'étapes de débruitage (qualité)
-          seed: 42,                      // Seed pour la reproductibilité
         }
       }
-    ) as unknown as string;
+    ) as any;
 
     const processingTime = Math.round((Date.now() - startTime) / 1000);
 
-    // Replicate retourne directement l'URL de l'image générée
+    // Replicate retourne un FileOutput avec une méthode url()
+    const imageUrl = typeof output === 'string' ? output : output.url();
+
     return {
-      imageUrl: output,
+      imageUrl,
       processingTime
     };
 
