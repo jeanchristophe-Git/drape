@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { checkQuota, decrementQuota } from '@/lib/quota';
-import { generateVirtualTryOn, COST_PER_GENERATION } from '@/lib/ai/replicate-vton';
+import { generateVirtualTryOn, COST_PER_GENERATION } from '@/lib/ai/pixazo-vton';
 import { uploadToSupabase } from '@/lib/supabase/storage';
 import { addWatermark } from '@/lib/watermark';
 import { prisma } from '@/lib/prisma';
@@ -94,14 +94,14 @@ export async function POST(req: NextRequest) {
         status: 'PROCESSING',
         resolution,
         hasWatermark,
-        aiProvider: 'replicate-catvton-flux'
+        aiProvider: 'pixazo-kolors-vton'
       }
     });
 
     // 8. Lancer génération IA (background process)
     (async () => {
       try {
-        // Génération avec Replicate CatVTON-Flux (2x plus rapide: ~33s)
+        // Génération avec Pixazo Kolors Virtual Try-On (rapide et fiable)
         const result = await generateVirtualTryOn({
           personImageUrl: personUrl,
           clothImageUrl: clothUrl
