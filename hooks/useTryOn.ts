@@ -43,7 +43,7 @@ export function useTryOn() {
   };
 
   const pollTryOnResult = async (tryOnId: string) => {
-    const maxAttempts = 60; // 60 tentatives (60 secondes)
+    const maxAttempts = 90; // 90 tentatives (90 secondes max pour la génération IA)
     let attempts = 0;
 
     return new Promise<TryOn>((resolve, reject) => {
@@ -72,10 +72,10 @@ export function useTryOn() {
             reject(new Error(tryOnData.errorMessage || 'Generation failed'));
           }
 
-          // Timeout après 60 secondes
+          // Timeout après 90 secondes
           if (attempts >= maxAttempts) {
             clearInterval(interval);
-            reject(new Error('Generation timeout'));
+            reject(new Error('Generation timeout. Please try again.'));
           }
         } catch (err) {
           clearInterval(interval);
