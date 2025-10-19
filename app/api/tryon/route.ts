@@ -7,7 +7,7 @@ import { addWatermark } from '@/lib/watermark';
 import { prisma } from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
 
-export const maxDuration = 60; // 60 secondes max (Vercel)
+export const maxDuration = 300; // 5 minutes max pour la génération IDM-VTON
 
 export async function POST(req: NextRequest) {
   try {

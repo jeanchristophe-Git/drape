@@ -43,7 +43,7 @@ export function useTryOn() {
   };
 
   const pollTryOnResult = async (tryOnId: string) => {
-    const maxAttempts = 90; // 90 tentatives (90 secondes max pour la génération IA)
+    const maxAttempts = 180; // 180 tentatives (3 minutes max pour IDM-VTON)
     let attempts = 0;
 
     return new Promise<TryOn>((resolve, reject) => {
@@ -72,10 +72,10 @@ export function useTryOn() {
             reject(new Error(tryOnData.errorMessage || 'Generation failed'));
           }
 
-          // Timeout après 90 secondes
+          // Timeout après 3 minutes
           if (attempts >= maxAttempts) {
             clearInterval(interval);
-            reject(new Error('Generation timeout. Please try again.'));
+            reject(new Error('Generation timeout (3 min). The AI might be busy, please try again.'));
           }
         } catch (err) {
           clearInterval(interval);
